@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON Search with Autocomplete</title>
+    <style>
+        body {
+            font-family: Calibri, sans-serif;
+            font-size: 10pt;
+            text-align: center;
+            background-color: #f9f9f9;
+            margin: 0;
+            padding: 0;
+        }
+
+        h1 {
+            font-size: 16pt;
+            font-weight: bold;
+            margin: 20px 0;
+            color: #333;
+        }
+
+        #searchBar {
+            width: 60%;
+            padding: 12px;
+            font-size: 14pt;
+            border: 2px solid #4CAF50;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #f3f3f3, #d9f9d9);
+            box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 14pt;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        table {
+            width: 90%;
+            border-collapse: collapse;
+            margin: 20px auto;
+            table-layout: auto;
+            word-wrap: break-word;
+            background-color: #fff;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+
+        tr:hover {
+            background-color: #c6f5c6;
+        }
+
+        .highlight {
+            background-color: yellow;
+            font-weight: bold;
+        }
+
+        #recordCount {
+            margin: 10px 0;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .autocomplete-suggestions {
+            border: 1px solid #ccc;
+            background: white;
+            position: absolute;
+            max-height: 150px;
+            overflow-y: auto;
+            width: 60%;
+            margin: 0 auto;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .autocomplete-suggestion {
+            padding: 8px;
+            cursor: pointer;
+            text-align: left;
+        }
+
+        .autocomplete-suggestion:hover {
+            background: #ddd;
+        }
+    </style>
+</head>
+<body>
+    <h1>Search Generic Content by Top Companies Available at Ishwar Pharma</h1>
+    <div id="recordCount">Number of records: 0</div>
+    <br>
+    <div style="position: relative; display: inline-block; width: 100%;">
+        <input type="text" id="searchBar" placeholder="Start typing to search..." oninput="onInputChange()">
+        <div id="autocomplete" class="autocomplete-suggestions"></div>
+    </div>
+    <br><br>
+    <button onclick="resetSearch()">Reset</button>
+    <br><br>
+    <table id="resultsTable">
+        <thead>
+            <tr>
+                <th>Brand</th>
+                <th>Company</th>
+                <th>Pack</th>
+                <th>Rate</th>
+                <th>Free Scheme</th>
+                <th>MRP</th>
+                <th>Content</th>
+                <th>Case</th>
+                <th>Total Matches</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td colspan="9">Waiting for input...</td></tr>
+        </tbody>
+    </table>
+
+    <script>
+        let jsonData = []; // Global variable to store JSON data
+        const autocompleteWords = [
+           "Abacavir",	"Abatacept",	"Abciximab",	"Abemaciclib",	"Abiraterone",	"Acamprosate",	"Acarbose",	"Acebrophylline",	"Aceclofenac",	"Acenocoumarol",	"Acetazolamide",	"Acetic",	"Acetylcysteine",	"Acipimox",	"Acitretin",	"Acotiamide",	"Acrivastine",	"Actarit",	"Acyclovir",	"Adalimumab",	"Adapalene",	"Adapting",	"Adefovir",	"Ademetionine",	"Adenosine",	"Ado-trastuzumab",	"Adrenaline",	"Adrenochrome",	"Afatinib",	"Aflapin",	"Aflibercept",	"Agomelatine",	"Albendazole",	"Albumin",	"Albuterol",	"Alcaftadine",	"Alcohol",	"Alemtuzumab",	"Alendronic",	"Alfacalcidol",	"Alfuzosin",	"Alginic",	"Aliskiren",	"Allantoin",	"Allium",	"Allopurinol",	"Allylestrenol",	"Almagate",	"Almotriptan",	"Aloe",	"Alogliptin",	"Alpelisib",	"Alpha",	"Alpha-amylase",	"Alpha-Beta",	"Alpha-galactosidase",	"Alprazolam",	"Alprostadil",	"Alteplase",	"Altretamine",	"Aluminium",	"Amantadine",	"Ambrisentan",	"Ambroxol",	"Amifostine",	"Amikacin",	"Amiloride",	"Amineptine",	"Aminexil",	"Amino",	"Aminobenzoic",	"Aminophylline",	"Amiodarone",	"Amisulpride",	"Amitriptyline",	"Amlexanox",	"Amlodipine",	"Ammonium",	"Amodiaquine",	"Amorolfine",	"Amoxapine",	"Amoxycillin",	"Amphotericin",	"Ampicillin",	"Amrinone",	"Amtolmetin",	"Amylmetacresol",	"Anastrozole",	"Anidulafungin",	"Antacids",	"Anti",	"ANTI-PSORIATIC",	"Antithymocyte",	"Apixaban",	"Apomorphine",	"Apraclonidine",	"Apremilast",	"Aprepitant",	"Aprotinin",	"Arbutin",	"Ardeparin",	"Arformoterol",	"Argatroban",	"Arginine",	"Aripiprazole",	"Armodafinil",	"Arsenic",	"Arteether",	"Artemether",	"Arterolane",	"Artesunate",	"Asenapine",	"Asparaginase",	"Aspirin",	"Astaxanthin",	"Astemizole",	"Atazanavir",	"Atenolol",	"Atezolizumab",	"Atomoxetine",	"Atorvastatin",	"Atosiban",	"Atracurium",	"Atropine",	"Axitinib",	"Azacitidine",	"Azathioprine",	"Azelaic",	"Azelastine",	"Azelnidipine",	"Azilsartan",	"Azithromycin",	"Aztreonam",	"Bacampicillin",	"Bacillus",	"Bacitracin",	"Baclofen",	"Bacterial",	"Balofloxacin",	"Balsalazide",	"Bambuterol",	"Baricitinib",	"Basiliximab",	"Becaplermin",	"Beclometasone",	"Belladonna",	"Bemiparin",	"Benazepril",	"Bendamustine",	"Benfotiamine",	"Benidipine",	"Benserazide",	"Benzalkonium",	"Benzathine",	"Benzocaine",	"Benzoic",	"Benzoin",	"Benzonatate",	"Benzophenone",	"Benzoxonium",	"Benzoyl",	"Benzthiazide",	"Benzydamine",	"Benzyl",	"Bepotastine",	"Besifloxacin",	"Beta",	"Beta-Cyclodextrin",	"Betahistine",	"Betamethasone",	"Betaxolol",	"Bethanechol",	"Bevacizumab",	"Bezafibrate",	"Bicalutamide",	"Bifonazole",	"Bilastine",	"Bile",	"Bimatoprost",	"Biotin",	"Bisacodyl",	"Bisoprolol",	"Bivalirudin",	"Bleomycin",	"Blonanserin",	"Borax",	"Boric",	"Boron",	"Bortezomib",	"Bosentan",	"Bosutinib",	"Boswellia",	"Brimonidine",	"Brinzolamide",	"Brivaracetam",	"Bromelain",	"Bromfenac",	"Bromhexine",	"Bromocriptine",	"Buclizine",	"Budesonide",	"Buphenine",	"Bupivacaine",	"Buprenorphine",	"Bupropion",	"Buserelin",	"Buspirone",	"Busulfan",	"Butenafine",	"Butorphanol",	"Butyl",	"Cabazitaxel",	"Cabergoline",	"Cabozantinib",	"Cadexomer",	"Caffeine",	"Calamine",	"Calcipotriol",	"Calcitonin",	"Calcitriol",	"Calcium",	"Camostat",	"Camphor",	"Camylofin",	"Canagliflozin",	"Candesartan",	"Capecitabine",	"Capreomycin",	"Capsaicin",	"Captopril",	"Carbachol",	"Carbamazepine",	"Carbazochrome",	"Carbenicillin",	"Carbetocin",	"Carbidopa",	"Carbimazole",	"Carbocisteine",	"Carboplatin",	"Carboprost",	"Carboxymethylcellulose",	"Cardioplegia",	"Carfilzomib",	"Cariprazine",	"Carisoprodol",	"Carmustine",	"Caroverine",	"Carvedilol",	"Casirivimab",	"Caspofungin",	"Cefaclor",	"Cefadroxil",	"Cefalexin",	"Cefazolin",	"Cefdinir",	"Cefditoren",	"Cefepime",	"Cefetamet",	"Cefixime",	"Cefoperazone",	"Cefotaxime",	"Cefpirome",	"Cefpodoxime",	"Cefprozil",	"Ceftazidime",	"Ceftibuten",	"Ceftizoxime",	"Ceftriaxone",	"Cefuroxime",	"Celecoxib",	"Celiprolol",	"Centbucridine",	"Centchroman",	"Cerebroprotein",	"Ceritinib",	"Certoparin",	"Cetalkonium",	"Cetilistat",	"Cetirizine",	"Cetrimide",	"Cetrorelix",	"Cetuximab",	"Cetyl",	"ChAdOx1",	"charcoal",	"Chlorambucil",	"Chloramphenicol",	"Chlorbutol",	"Chlordiazepoxide",	"Chlorhexidine",	"Chlormezanone",	"Chlorocresol",	"Chloroform",	"Chloroprocaine",	"Chloroquine",	"Chlorpheniramine",	"Chlorpromazine",	"Chlorpropamide",	"Chlorthalidone",	"Chlorzoxazone",	"Cholera",	"Cholestyramine",	"Choline",	"Chondroitin",	"Chromium",	"Chymotrypsin",	"Ciclesonide",	"Ciclopirox",	"Ciclosporin",	"Cilastatin",	"Cilnidipine",	"Cilostazol",	"Cimetidine",	"Cimetropium",	"Cinacalcet",	"Cinitapride",	"Cinnarizine",	"Ciprofloxacin",	"Cisapride",	"Cisatracurium",	"Cisplatin",	"Citalopram",	"Citicoline",	"Citric",	"Citrus",	"Cladribine",	"Clarithromycin",	"Clavulanic",	"Clebopride",	"Clemastine",	"Clidinium",	"Climbazole",	"Clindamycin",	"Clinidipine",	"Clioquinol",	"Clobazam",	"Clobetasol",	"Clobetasone",	"Clofarabine",	"Clofazimine",	"Clomiphene",	"Clomipramine",	"Clonazepam",	"Clonidine",	"Clopidogrel",	"Clostridium",	"Clotrimazole",	"Cloxacillin",	"Clozapine",	"Coal",	"Codeine",	"Codergocrine",	"Coenzyme",	"Colchicine",	"Colesevelam",	"Colfosceril",	"Colistimethate",	"Colistin",	"Collagen",	"Colloidal",	"Colostrum",	"Conivaptan",	"Conjugated",	"Copper",	"Coral",	"Corticotropin",	"Co-trimoxazole",	"Cranberry",	"Crotamiton",	"Curcuma",	"Cyanocobalamin",	"Cyclandelate",	"Cyclobenzaprine",	"Cyclopentolate",	"Cyclophosphamide",	"Cycloserine",	"Cyproheptadine",	"Cyproterone",	"Cytarabine",	"Dabigatran",	"Dacarbazine",	"Daclatasvir",	"Daclizumab",	"Dactinomycin",	"Dalfampridine",	"Dalteparin",	"Danazol",	"Dapagliflozin",	"Dapoxetine",	"Dapsone",	"Daptomycin",	"Daratumumab",	"Darbepoetin",	"Darifenacin",	"Darunavir",	"Dasatinib",	"Daunorubicin",	"D-Chiro",	"Deca",	"Decitabine",	"Deferasirox",	"Deferiprone",	"Deferoxamine",	"Deflazacort",	"Degarelix",	"Dehydroemetine",	"Dehydroepiandrosterone",	"Demeclocycline",	"Denosumab",	"Desloratadine",	"Desmopressin",	"Desogestrel",	"Desonide",	"Desoximetasone",	"Desvenlafaxine",	"Dexamethasone",	"Dexchlorpheniramine",	"Dexibuprofen",	"Dexketoprofen",	"Dexlansoprazole",	"Dexmedetomidine",	"Dexpanthenol",	"Dexrabeprazole",	"Dextran",	"Dextromethorphan",	"Dextropropoxyphene",	"Dextrose",	"Dextrothyroxine",	"Diacerein",	"Diastase",	"Diatrizoic",	"Diazepam",	"Diazoxide",	"Dibasic",	"Dibucaine",	"Dichlorobenzyl",	"Diclofenac",	"Dicloxacillin",	"Dicyclomine",	"Didanosine",	"Dienogest",	"Diethylcarbamazine",	"Diflorasone",	"Difluprednate",	"Digoxin",	"Dihydralazine",	"Di-iodohydroxyquinoline",	"Dill",	"Diloxanide",	"Diltiazem",	"Dimenhydrinate",	"Dimercaprol",	"Dimethicone",	"Dimethindene",	"Dimethyl",	"Dinoprostone",	"Dioctyl",	"Diosmin",	"Diphenhydramine",	"Diphenoxylate",	"Diphtheria",	"Dipyridamole",	"Disodium",	"Disopyramide",	"Disulfiram",	"Dithranol",	"Divalproex",	"Dobutamine",	"Docetaxel",	"Docosahexanoic",	"Docusate",	"Dolutegravir",	"Domperidone",	"Donepezil",	"Dopamine",	"Doripenem",	"Dorzolamide",	"Dosulepin",	"Doxapram",	"Doxazosin",	"Doxepin",	"Doxifluridine",	"Doxofylline",	"Doxorubicin",	"Doxycycline",	"Doxylamine",	"D-Panthenol",	"Dronedarone",	"Drospirenone",	"Drotaverine",	"Dulaglutide",	"Duloxetine",	"Durvalumab",	"Dutasteride",	"Dydrogesterone",	"Ebastine",	"Eberconazole",	"Econazole",	"Edaravone",	"Efavirenz",	"Eflornithine",	"Efonidipine",	"Eicosapentaenoic",	"Electrolytes",	"Elemental",	"Eletriptan",	"Eltrombopag",	"Embramine",	"Empagliflozin",	"Emtricitabine",	"Enalapril",	"Enalaprilat",	"Enclomiphene",	"Endoxifen",	"Enoxaparin",	"Enrofloxacin",	"Entacapone",	"Entecavir",	"Enzalutamide",	"Epalrestat",	"Eperisone",	"Ephedrine",	"Epinastine",	"Epirubicin",	"Eplerenone",	"Eprosartan",	"Epsilon",	"Eptacog",	"Eptifibatide",	"Equine",	"Erdosteine",	"Erenumab",	"Ergoloid",	"Ergotamine",	"Eribulin",	"Erlotinib",	"Ertapenem",	"Erythromycin",	"Escitalopram",	"Eslicarbazepine",	"Esmolol",	"Esomeprazole",	"Estradiol",	"Estramustine",	"Estriol",	"Eszopiclone",	"Etanercept",	"Ethacridine",	"Ethambutol",	"Ethamsylate",	"Ethinyl",	"Ethionamide",	"Ethosuximide",	"Ethylmorphine",	"Etidronate",	"Etizolam",	"Etodolac",	"Etofylline",	"Etomidate",	"Etonogestrel",	"Etoposide",	"Etoricoxib",	"Euphorbia",	"Evening",	"Everolimus",	"Evogliptin",	"Exemestane",	"Exenatide",	"Extractum",	"Ezetimibe",	"Famciclovir",	"Famotidine",	"Faropenem",	"Favipiravir",	"Febuxostat",	"Felbinac",	"Felodipine",	"Fenbendazole",	"Fenfluramine",	"Fennel",	"Fenofibrate",	"Fenoverine",	"Fenpiverinium",	"Fentanyl",	"Fenticonazole",	"Feracrylum",	"Ferric",	"Ferrous",	"Fexofenadine",	"Fibrinogen",	"Filamentous",	"Filgrastim",	"Fimasartan",	"Finasteride",	"Fingolimod",	"Flavoured",	"Flavoxate",	"Flecainide",	"Flucloxacillin",	"Fluconazole",	"Flucytosine",	"Fludarabine",	"Fludrocortisone",	"Flumazenil",	"Flunarizine",	"Fluocinolone",	"Fluorescein",	"Fluorometholone",	"Fluorouracil",	"Fluoxetine",	"Flupenthixol",	"Fluphenazine",	"Flupirtine",	"Flurazepam",	"Flurbiprofen",	"Flutamide",	"Fluticasone",	"Fluvastatin",	"Fluvoxamine",	"Folic",	"Fondaparinux",	"Formoterol",	"Fosaprepitant",	"Fosfestrol",	"Fosfomycin",	"Fosinopril",	"Fosphenytoin",	"Framycetin",	"Freeze-dried",	"Fructo",	"Fulvestrant",	"Furazolidone",	"Furosemide",	"Fusidic",	"Gabapentin",	"Galantamine",	"Gamma",	"Ganciclovir",	"Ganirelix",	"Garenoxacin",	"Gastroprokinetics",	"Gatifloxacin",	"Gefitinib",	"Gelatin",	"Gemcitabine",	"Gemfibrozil",	"Gemifloxacin",	"Gemigliptin",	"Gentamicin",	"Gestodene",	"Ginkgo",	"Glatiramer",	"Glibenclamide",	"Gliclazide",	"Glimepiride",	"Glipizide",	"Glucagon",	"Glucosamine",	"Glutathione",	"Glycerin",	"Glycerol",	"Glycine",	"Glycolic",	"Glycopyrrolate",	"Gonadotrophins",	"Goserelin",	"Gramicidin",	"Granisetron",	"Granulocyte",	"Griseofulvin",	"Guaifenesin",	"Gynaecological",	"Haemophilus",	"Halobetasol",	"Halometasone",	"Haloperidol",	"Halothane",	"Harpagoside",	"Hemocoagulase",	"Heparin",	"Hepatitis",	"Hesperidin",	"Histamine",	"Homatropine",	"Homotaurine",	"Human",	"Hyaluronic",	"Hyaluronidase",	"Hydralazine",	"Hydrochloride",	"Hydrochlorothiazide",	"Hydrocortisone",	"Hydroflumethiazide",	"Hydrogen",	"Hydroquinone",	"Hydrotalcite",	"Hydroxocobalamin",	"Hydroxychloroquine",	"Hydroxyethyl",	"Hydroxyprogesterone",	"Hydroxypropylmethylcellulose",	"Hydroxyquinolines",	"Hydroxyurea",	"Hydroxyzine",	"Hyoscine",	"Hyoscyamine",	"Ibandronic",	"Ibrutinib",	"Ibuprofen",	"Ibutilide",	"Ichthyol",	"Ichtyolammonium",	"Idarubicin",	"Idebenone",	"Idoxuridine",	"Ifosfamide",	"Iguratimod",	"Ilaprazole",	"Iloperidone",	"Imatinib",	"Imdevimab",	"Imidapril",	"Imipenem",	"Imipramine",	"Imiquimod",	"Inactivated",	"Indacaterol",	"Indapamide",	"Indinavir",	"Indomethacin",	"Infliximab",	"Inositol",	"Inotuzumab",	"Insulin",	"Interferon",	"Invert",	"Iodine",	"Iohexol",	"Iopamidol",	"Iopromide",	"Ipratropium",	"Irbesartan",	"Irinotecan",	"Iron",	"Isavuconazole",	"Isoflurane",	"Isoniazid",	"Isoprenaline",	"Isopropamide",	"Isosorbide",	"Isotretinoin",	"Isoxsuprine",	"Ispaghula",	"Itolizumab",	"Itopride",	"Itraconazole",	"Ivabradine",	"Ivermectin",	"Ixabepilone",	"Kalmegh",	"Kanamycin",	"Ketamine",	"Ketoconazole",	"Ketoprofen",	"Ketorolac",	"Ketotifen",	"Kojic",	"Labetalol",	"Lacidipine",	"Lacosamide",	"Lactase",	"Lactic",	"Lactitol",	"Lacto",	"Lactobacillus",	"Lactose",	"Lactulose",	"Lafutidine",	"L-alanyl-L-glutamine",	"Lamivudine",	"Lamotrigine",	"Lanolin",	"Lansoprazole",	"Lanthanum",	"Lapatinib",	"L-Arginine",	"Laropiprant",	"Latanoprost",	"L-Carnitine",	"Lecithin",	"Ledipasvir",	"Leflunomide",	"Lenalidomide",	"Lenograstim",	"Lenvatinib",	"Lercanidipine",	"Letrozole",	"Leuprolide",	"Levamisole",	"Levetiracetam",	"Levobunolol",	"Levo-carnitine",	"Levocetirizine",	"Levocloperastine",	"Levodopa",	"Levodropropizine",	"Levofloxacin",	"Levomenthol",	"Levomilnacipran",	"Levonadifloxacin",	"Levonorgestrel",	"Levosalbutamol",	"Levosimendan",	"Levosulpiride",	"L-Glutamate",	"L-Histidine",	"Lidocaine",	"Lidocaine/Lignocaine",	"Light",	"Lignocaine",	"Linagliptin",	"Lincomycin",	"Lindane",	"Linezolid",	"Linoleic",	"Linseed",	"Lipase",	"Liposomal",	"Liquid",	"Liraglutide",	"Lisinopril",	"L-Isoleucine",	"Lithium",	"Live",	"Liver",	"Lixisenatide",	"L-Leucine",	"L-Lysine",	"L-Methyl",	"Lomefloxacin",	"Lomustine",	"Loperamide",	"Lopinavir",	"Loratadine",	"Lorazepam",	"Lorcaserin",	"L-Ornithine",	"Lornoxicam",	"Losartan",	"Loteprednol",	"Lovastatin",	"Loxapine",	"Lubiprostone",	"Luliconazole",	"Lumefantrine",	"Lurasidone",	"Luvistin",	"Lycopene",	"Lymecycline",	"Lynestrenol",	"Lysine",	"Macitentan",	"Magaldrate",	"Magnesium",	"Mandelic",	"Manganese",	"Mannitol",	"Maraviroc",	"Measles",	"Mebendazole",	"Mebeverine",	"Mecetronium",	"Meclizine",	"Medroxyprogesterone",	"Mefenamic",	"Mefloquine",	"Megestrol",	"Meglumine",	"Melatonin",	"Melitracen",	"Meloxicam",	"Melphalan",	"Memantine",	"Menadione",	"Meningococcal",	"Menotrophin",	"Menthol",	"Mepacrine",	"Mephenesin",	"Mephentermine",	"Mepolizumab",	"Mercaptopurine",	"Meropenem",	"Mesalazine",	"Mesna",	"Messenger",	"Mesterolone",	"Metadoxine",	"Metamizole",	"Metaxalone",	"Metformin",	"Methdilazine",	"Methimazole",	"Methionine",	"Methocarbamol",	"Methotrexate",	"Methoxsalen",	"Methoxy",	"Methyl",	"Methylcellulose",	"Methylcobalamin",	"Methylcobalamin/Mecobalamin",	"Methyldopa",	"Methylene",	"Methylergometrine",	"Methylparaben",	"Methylphenidate",	"Methylpolysiloxane",	"Methylprednisolone",	"Metoclopramide",	"Metolazone",	"Metoprolol",	"Metronidazole",	"Mexiletine",	"Mianserin",	"Micafungin",	"Miconazole",	"Midazolam",	"Midodrine",	"Mifepristone",	"Miglitol",	"Milk",	"Milnacipran",	"Milrinone",	"Miltefosine",	"Minocycline",	"Minodronic",	"Minoxidil",	"Mirabegron",	"Mirtazapine",	"Misoprostol",	"Mitomycin",	"Mitoxantrone",	"Mizolastine",	"Moclobemide",	"Modafinil",	"Molgramostim",	"Molnupiravir",	"Mometasone",	"Mono",	"Monobasic",	"Monobenzone",	"Montelukast",	"Morphine",	"Mosapride",	"Moxifloxacin",	"Moxonidine",	"Mucopolysaccharide",	"Mulberry",	"Mumps",	"Mupirocin",	"Mycophenolate",	"Myo-Inositol",	"Nabumetone",	"n-acetylcarnosine",	"Nadifloxacin",	"Nadroparin",	"Naftopidil",	"Nalbuphine",	"Nalidixic",	"Naloxone",	"Naltrexone",	"Nandrolone",	"Naphazoline",	"Naproxen",	"Naratriptan",	"Nartograstim",	"Natalizumab",	"Natamycin",	"Nateglinide",	"Nattokinase",	"n-Butyl-2-cyanoacrylate",	"Nebivolol",	"Nefopam",	"Neisseria",	"Nelfinavir",	"Neomycin",	"Neostigmine",	"Nepafenac",	"Netarsudil",	"Netilmicin",	"Nevirapine",	"Niacinamide",	"Nicergoline",	"Niclosamide",	"Nicorandil",	"Nicotinamide",	"Nicotine",	"Nicotinic",	"Nifedipine",	"Nilotinib",	"Nimesulide",	"Nimodipine",	"Nimorazole",	"Nimotuzumab",	"Nintedanib",	"Nitazoxanide",	"Nitrazepam",	"Nitrendipine",	"Nitric",	"Nitrofurantoin",	"Nitrofurazone",	"Nitroglycerin",	"Nitroprusside",	"Nivolumab",	"Nizatidine",	"Norepinephrine",	"Norethisterone",	"Norfloxacin",	"Norgestrel",	"Nortriptyline",	"Noscapine",	"Nystatin",	"Obeticholic",	"Octenidine",	"Octinoxate",	"Octreotide",	"Ofatumumab",	"Ofloxacin",	"Olanzapine",	"Olaparib",	"Oleum",	"Olive",	"Olmesartan",	"Olopatadine",	"Omalizumab",	"Omega-3",	"Omeprazole",	"OnabotulinumtoxinA",	"Ondansetron",	"Opipramol",	"ORAL",	"Orciprenaline",	"Orlistat",	"Ornidazole",	"Ornithine",	"Oseltamivir",	"Osimertinib",	"Otilonium",	"Oxaceprol",	"Oxaliplatin",	"Oxaprozin",	"Oxazepam",	"Oxcarbazepine",	"Oxetacaine",	"Oxiconazole",	"Oxybutynin",	"Oxychloro",	"Oxyfedrin",	"Oxymetazoline",	"Oxyphenbutazone",	"Oxyphenonium",	"Oxytetracycline",	"Oxytocics",	"Oxytocin",	"Ozagrel",	"Ozenoxacin",	"Paclitaxel",	"Paliperidone",	"Palonosetron",	"Pamabrom",	"Pamidronate",	"Pancreatin",	"Pancuronium",	"Panitumumab",	"Pantoprazole",	"Pantothenic",	"Papain",	"Papaverine",	"Paracetamol",	"Paracetamol/Acetaminophen",	"Paradichlorobenzene",	"Parecoxib",	"Parnaparin",	"Paroxetine",	"Pazopanib",	"Pazufloxazin",	"Pefloxacin",	"Pegaptanib",	"Pegaspargase",	"Pegfilgrastim",	"Pegylated",	"Pembrolizumab",	"Pemetrexed",	"Penfluridol",	"Penicillamine",	"Penicillin",	"Pentazocine",	"Pentosan",	"Pentoxifylline",	"Peppermint",	"Pepsin",	"Peptone",	"Perampanel",	"Perindopril",	"Permethrin",	"Pertactin",	"Pertussis",	"Pertuzumab",	"Pethidine",	"Phenazone",	"Phenazopyridine",	"Phenformin",	"Phenindione",	"Pheniramine",	"Phenobarbitone",	"Phenolphthalein",	"Phenoxybenzamine",	"Phenoxyethanol",	"Phenyl",	"Phenylalanine",	"Phenylephrine",	"Phenylpropanolamine",	"Phenyramidol",	"Phenytoin",	"Pholcodine",	"Phytomenadione",	"Pidotimod",	"Pilocarpine",	"Pimecrolimus",	"Pimozide",	"Pinaverium",	"Pindolol",	"Pine",	"Pioglitazone",	"Pipecuronium",	"Piperacillin",	"Piperaquine",	"Piperazine",	"Piperine",	"Piracetam",	"Pirfenidone",	"Piribedil",	"Piroctone",	"Piroxicam",	"Pitavastatin",	"Pitofenone",	"Pizotifen",	"Placenta",	"Plerixafor",	"Pneumococcal",	"Podophyllum",	"Policosanol",	"Polidocanol",	"Polio",	"Poliomyelitis",	"Polycarbophil",	"Polyethylene",	"Polymyxin",	"Polypodium",	"Polystyrene",	"Polyvinyl",	"Pomalidomide",	"Poractant",	"Posaconazole",	"Potassium",	"Povidone",	"Pralidoxime",	"Pramipexole",	"Pramoxine",	"Prasugrel",	"Pravastatin",	"Praziquantel",	"Prazosin",	"Prednicarbate",	"Prednisolone",	"Pregabalin",	"Prenoxdiazine",	"Prilocaine",	"Primaquine",	"Primidone",	"Proanthocyanidin",	"Probenecid",	"Procaine",	"Procarbazine",	"Prochlorperazine",	"Procyclidine",	"Progesterone",	"Proguanil",	"Promethazine",	"Propafenone",	"Propantheline",	"Proparacaine",	"Propofol",	"Propranolol",	"Propyl",	"Propylene",	"Protamine",	"Protease",	"Prothionamide",	"Prucalopride",	"Prulifloxacin",	"Pseudoephedrine",	"Psoralen",	"Purified",	"Pyrantel",	"Pyrazinamide",	"Pyridostigmine",	"Pyridoxal-5-phasphate",	"Pyridoxal-5-phosphate",	"Pyridoxamine",	"Pyridoxine",	"Pyrimethamine",	"Pyritinol",	"Quercetin",	"Quetiapine",	"Quinapril",	"Quinidine",	"Quinine",	"Quiniodochlor",	"Rabeprazole",	"Rabies",	"Racecadotril",	"Racemethionine",	"Raloxifene",	"Raltegravir",	"Ramelteon",	"Ramipril",	"Ramosetron",	"Ramucirumab",	"Ranibizumab",	"Ranitidine",	"Ranolazine",	"Rasagiline",	"Rasburicase",	"Rebamipide",	"Reboxetine",	"Recombinant",	"Regorafenib",	"Remdesivir",	"Remogliflozin",	"Repaglinide",	"Reserpine",	"Resveratrol",	"Retapamulin",	"Reteplase",	"Revaprazan",	"Reviparin",	"Ribavirin",	"Ribociclib",	"Rifabutin",	"Rifampicin",	"Rifaximin",	"Riluzole",	"Rimonabant",	"Ringer's",	"Riociguat",	"Ripasudil",	"Risedronate",	"Risperidone",	"Ritodrine",	"Ritonavir",	"Rituximab",	"Rivaroxaban",	"Rivastigmine",	"Rizatriptan",	"Rocuronium",	"Rofecoxib",	"Roflumilast",	"Romiplostim",	"Ropinirole",	"Ropivacaine",	"Rosehip",	"Rosiglitazone",	"Rosuvastatin",	"Rotavirus",	"Roxatidine",	"Roxithromycin",	"Rubella",	"Rucaparib",	"Rupatadine",	"Rutin",	"Rutoside",	"Ruxolitinib",	"Saccharomyces",	"Sacubitril",	"S-Adenosyl",	"Safinamide",	"Salbutamol",	"Salicylic",	"Saline",	"Salmeterol",	"Salmonella",	"S-Amlodipine",	"Saquinavir",	"Sargramostim",	"Saroglitazar",	"Satranidazole",	"Saxagliptin",	"Secnidazole",	"Selegiline",	"Selenious",	"Selenium",	"Selenomethionine",	"Selexipag",	"Semaglutide",	"Seratrodast",	"Serratiopeptidase",	"Sertaconazole",	"Sertindole",	"Sertraline",	"S-Etodolac",	"Sevelamer",	"Sevoflurane",	"Sildenafil",	"Silodosin",	"Silver",	"Silymarin",	"Simethicone",	"Simvastatin",	"Sirolimus",	"Sisomicin",	"Sitagliptin",	"S-Metoprolol",	"Snake",	"Sodium",	"Sofalcone",	"Sofosbuvir",	"Solifenacin",	"Somatostatin",	"Somatropin",	"Sorafenib",	"Sorbitol",	"Sotalol",	"Soya",	"Sparfloxacin",	"Spiramycin",	"Spironolactone",	"Stabilized",	"Standard",	"Stannous",	"Stanozolol",	"Stavudine",	"Sterile",	"Streptokinase",	"Streptomycin",	"Strontium",	"Succinyl",	"Sucralfate",	"Sucroferric",	"Sulbactam",	"Sulbutiamine",	"Sulfadiazine",	"Sulfamethopyrazine",	"Sulfamethoxazole",	"Sulfasalazine",	"Sulfiram",	"Sulphacetamide",	"Sulphadoxine",	"Sulphur",	"Sulpiride",	"Sultamicillin",	"Sumatriptan",	"Sunitinib",	"Suxamethonium",	"Tacalcitol",	"Tacrolimus",	"Tadalafil",	"Tafluprost",	"Tamoxifen",	"Tamsulosin",	"Tannic",	"Tapentadol",	"Taurine",	"Tazarotene",	"Tazobactum",	"Tegafur",	"Tegaserod",	"Teicoplanin",	"Telbivudine",	"Telmisartan",	"Temozolomide",	"Temsirolimus",	"Tenecteplase",	"Teneligliptin",	"Tenofovir",	"Tenoxicam",	"Terazosin",	"Terbinafine",	"Terbutaline",	"Terfenadine",	"Teriflunomide",	"Teriparatide",	"Terizidone",	"Terlipressin",	"Terpin",	"Testosterone",	"Tetanus",	"Tetrabenazine",	"Tetracaine",	"Tetrachlorodecaoxygen",	"Tetracycline",	"Tetrahydrozoline",	"Thalidomide",	"Theophylline",	"Thiamine",	"Thiamine(Vitamin",	"Thiocolchicoside",	"Thioguanine",	"Thiomersal",	"Thiopental",	"Thioridazine",	"Thiotepa",	"Thrombin",	"Thymol",	"Thymosin",	"Thyroxine",	"Tiagabine",	"Tianeptine",	"Tiapride",	"Tibolone",	"Ticagrelor",	"Ticarcillin",	"Ticlopidine",	"Tigecycline",	"Timolol",	"Tinidazole",	"Tinzaparin",	"Tioconazole",	"Tiotropium",	"Tirofiban",	"Tiropramide",	"Tizanidine",	"Tobramycin",	"Tocilizumab",	"Tocoferol",	"Tofacitinib",	"Tofisopam",	"Tolbutamide",	"Tolfenamic",	"Tolmetin",	"Tolnaftate",	"Tolperisone",	"Tolterodine",	"Tolvaptan",	"Topiramate",	"Topiroxostat",	"Topotecan",	"Torasemide",	"Trabectedin",	"Tramadol",	"Trametinib",	"Tranexamic",	"Tranylcypromine",	"Trastuzumab",	"Travoprost",	"Trazodone",	"Treosulfan",	"Tretinoin",	"Triamcinolone",	"Triamterene",	"Tribasic",	"Tricholine",	"Triclofos",	"Triclosan",	"Trifluoperazine",	"Trihexyphenidyl",	"Trimebutine",	"Trimetazidine",	"Trimethoprim",	"Trimipramine",	"Trioxasalen",	"Triprolidine",	"Triptorelin",	"Trithioparamethoxy",	"Tropicamide",	"Trospium",	"Troxerutin",	"Troxipide",	"Trypan",	"Trypsin",	"Tulobuterol",	"Turpentine",	"Udenafil",	"Ulinastatin",	"Ulipristal",	"Umeclidinium",	"Uniflexin",	"Univestin",	"Uracil",	"Urea",	"Urofollitropin",	"Urokinase",	"Ursodeoxycholic",	"Vaccine",	"Valacyclovir",	"Valdecoxib",	"Valethamate",	"Valganciclovir",	"Valproic",	"Valsartan",	"Vancomycin",	"Vandetanib",	"Vardenafil",	"Varenicline",	"Varicella",	"Vasopressin",	"Vecuronium",	"Velpatasvir",	"Venlafaxine",	"Verapamil",	"Verteporfin",	"Vigabatrin",	"Vilanterol",	"Vilazodone",	"Vildagliptin",	"Vinblastine",	"Vincristine",	"Vinorelbine",	"Vinpocetine",	"Vitamin",	"Voglibose",	"Voriconazole",	"Vortioxetine",	"Warfarin",	"White",	"Whole",	"Xantinol",	"Xipamide",	"Xylitol",	"Xylometazoline",	"Zafirlukast",	"Zaleplon",	"Zaltoprofen",	"Zidovudine",	"Zileuton",	"Zinc",	"Ziprasidone",	"Zoledronic",	"Zolmitriptan",	"Zolpidem",	"Zonisamide",	"Zopiclone",	"Zotepine",	"Zuclopenthixol",
+        ];
+
+        // Load JSON data from an external file
+        async function loadData() {
+            try {
+                const response = await fetch('data.json');
+                jsonData = await response.json();
+                document.getElementById('recordCount').textContent = `Number of records: ${jsonData.length}`;
+            } catch (error) {
+                console.error('Error loading JSON data:', error);
+            }
+        }
+
+        function onInputChange() {
+            const searchBar = document.getElementById('searchBar');
+            const input = searchBar.value.toLowerCase();
+
+            // Delay the search if the input is less than 3 characters
+            if (input.length >= 3) {
+                search(input);
+            } else {
+                showInitialMessage();
+            }
+
+            // Autocomplete suggestions
+            showSuggestions(input);
+        }
+
+        function search(input) {
+            const terms = input.split(' ');
+
+            const results = jsonData.filter(item => {
+                return terms.every(term => {
+                    return ['BRAND', 'COMPANY', 'CONTENT'].some(key => 
+                        item[key] && item[key].toString().toLowerCase().includes(term)
+                    );
+                });
+            });
+
+            results.forEach(result => {
+                result.totalMatches = terms.reduce((acc, term) => {
+                    return acc + ['BRAND', 'COMPANY', 'CONTENT'].reduce((count, key) => {
+                        if (result[key] && result[key].toString().toLowerCase().includes(term)) {
+                            count += (result[key].toString().toLowerCase().match(new RegExp(term, 'g')) || []).length;
+                        }
+                        return count;
+                    }, 0);
+                }, 0);
+            });
+
+            results.sort((a, b) => b.totalMatches - a.totalMatches);
+
+            const resultsTable = document.getElementById('resultsTable').getElementsByTagName('tbody')[0];
+            resultsTable.innerHTML = '';
+
+            if (results.length === 0) {
+                resultsTable.innerHTML = '<tr><td colspan="9">No records found.</td></tr>';
+            }
+
+            results.forEach(result => {
+                const row = resultsTable.insertRow();
+
+                row.insertCell().innerHTML = highlightMatch(result.BRAND, terms);
+                row.insertCell().innerHTML = highlightMatch(result.COMPANY, terms);
+                row.insertCell().textContent = result.PACK || 'N/A';
+                row.insertCell().textContent = isNumeric(result.RATE) ? Number(result.RATE).toFixed(2) : 'N/A';
+                row.insertCell().textContent = isNumeric(result["Free Scheme"]) ? Number(result["Free Scheme"]).toFixed(2) : 'N/A';
+                row.insertCell().textContent = isNumeric(result.MRP) ? Number(result.MRP).toFixed(2) : 'N/A';
+                row.insertCell().innerHTML = highlightMatch(result.CONTENT, terms);
+                row.insertCell().textContent = result.CASE || 'N/A';
+                row.insertCell().textContent = result.totalMatches;
+            });
+        }
+
+        function showSuggestions(input) {
+            const suggestions = autocompleteWords.filter(word => word.toLowerCase().startsWith(input));
+
+            const autocompleteDiv = document.getElementById('autocomplete');
+            autocompleteDiv.innerHTML = '';
+
+            if (input && suggestions.length) {
+                suggestions.forEach(suggestion => {
+                    const div = document.createElement('div');
+                    div.className = 'autocomplete-suggestion';
+                    div.textContent = suggestion;
+                    div.onclick = () => {
+                        const searchBar = document.getElementById('searchBar');
+                        searchBar.value = suggestion;
+                        autocompleteDiv.innerHTML = '';
+                        search(suggestion);
+                    };
+                    autocompleteDiv.appendChild(div);
+                });
+            }
+        }
+
+        function resetSearch() {
+            document.getElementById('searchBar').value = '';
+            showInitialMessage();
+        }
+
+        function showInitialMessage() {
+            const resultsTable = document.getElementById('resultsTable').getElementsByTagName('tbody')[0];
+            resultsTable.innerHTML = '<tr><td colspan="9">Waiting for input...</td></tr>';
+        }
+
+        function isNumeric(value) {
+            return !isNaN(parseFloat(value)) && isFinite(value);
+        }
+
+        function highlightMatch(text, terms) {
+            if (!text) return 'N/A';
+            let highlightedText = text;
+            terms.forEach(term => {
+                const regex = new RegExp(`(${term})`, 'gi');
+                highlightedText = highlightedText.toString().replace(regex, '<span class="highlight">$1</span>');
+            });
+            return highlightedText;
+        }
+
+        // Load JSON data on page load
+        window.onload = loadData;
+    </script>
+</body>
+</html>
