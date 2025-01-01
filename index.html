@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON Search with Autocomplete</title>
+    <style>
+        body {
+            font-family: Calibri, sans-serif;
+            font-size: 10pt;
+            text-align: center;
+            background-color: #f9f9f9;
+            margin: 0;
+            padding: 0;
+        }
+
+        h1 {
+            font-size: 16pt;
+            font-weight: bold;
+            margin: 20px 0;
+            color: #333;
+        }
+
+        #searchBar {
+            width: 60%;
+            padding: 12px;
+            font-size: 14pt;
+            border: 2px solid #4CAF50;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #f3f3f3, #d9f9d9);
+            box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 14pt;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        table {
+            width: 90%;
+            border-collapse: collapse;
+            margin: 20px auto;
+            table-layout: auto;
+            word-wrap: break-word;
+            background-color: #fff;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+
+        tr:hover {
+            background-color: #c6f5c6;
+        }
+
+        .highlight {
+            background-color: yellow;
+            font-weight: bold;
+        }
+
+        #recordCount {
+            margin: 10px 0;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .autocomplete-suggestions {
+            border: 1px solid #ccc;
+            background: white;
+            position: absolute;
+            max-height: 150px;
+            overflow-y: auto;
+            width: 60%;
+            margin: 0 auto;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .autocomplete-suggestion {
+            padding: 8px;
+            cursor: pointer;
+            text-align: left;
+        }
+
+        .autocomplete-suggestion:hover {
+            background: #ddd;
+        }
+    </style>
+</head>
+<body>
+    <h1>Search Generic Content by Top Companies Available at Ishwar Pharma</h1>
+    <div id="recordCount">Number of records: 0</div>
+    <br>
+    <div style="position: relative; display: inline-block; width: 100%;">
+        <input type="text" id="searchBar" placeholder="Start typing to search..." oninput="onInputChange()">
+        <div id="autocomplete" class="autocomplete-suggestions"></div>
+    </div>
+    <br><br>
+    <button onclick="resetSearch()">Reset</button>
+    <br><br>
+    <table id="resultsTable">
+        <thead>
+            <tr>
+                <th>Brand</th>
+                <th>Company</th>
+                <th>Pack</th>
+                <th>Rate</th>
+                <th>Free Scheme</th>
+                <th>MRP</th>
+                <th>Content</th>
+                <th>Case</th>
+                <th>Total Matches</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td colspan="9">Waiting for input...</td></tr>
+        </tbody>
+    </table>
+
+    <script>
+        let jsonData = []; // Global variable to store JSON data
+        const autocompleteWords = [
+           
+        ];
+
+        // Load JSON data from an external file
+        async function loadData() {
+            try {
+                const response = await fetch('data.json');
+                jsonData = await response.json();
+                document.getElementById('recordCount').textContent = `Number of records: ${jsonData.length}`;
+            } catch (error) {
+                console.error('Error loading JSON data:', error);
+            }
+        }
+
+        function onInputChange() {
+            const searchBar = document.getElementById('searchBar');
+            const input = searchBar.value.toLowerCase();
+
+            // Delay the search if the input is less than 3 characters
+            if (input.length >= 3) {
+                search(input);
+            } else {
+                showInitialMessage();
+            }
+
+            // Autocomplete suggestions
+            showSuggestions(input);
+        }
+
+        function search(input) {
+            const terms = input.split(' ');
+
+            const results = jsonData.filter(item => {
+                return terms.every(term => {
+                    return ['BRAND', 'COMPANY', 'CONTENT'].some(key => 
+                        item[key] && item[key].toString().toLowerCase().includes(term)
+                    );
+                });
+            });
+
+            results.forEach(result => {
+                result.totalMatches = terms.reduce((acc, term) => {
+                    return acc + ['BRAND', 'COMPANY', 'CONTENT'].reduce((count, key) => {
+                        if (result[key] && result[key].toString().toLowerCase().includes(term)) {
+                            count += (result[key].toString().toLowerCase().match(new RegExp(term, 'g')) || []).length;
+                        }
+                        return count;
+                    }, 0);
+                }, 0);
+            });
+
+            results.sort((a, b) => b.totalMatches - a.totalMatches);
+
+            const resultsTable = document.getElementById('resultsTable').getElementsByTagName('tbody')[0];
+            resultsTable.innerHTML = '';
+
+            if (results.length === 0) {
+                resultsTable.innerHTML = '<tr><td colspan="9">No records found.</td></tr>';
+            }
+
+            results.forEach(result => {
+                const row = resultsTable.insertRow();
+
+                row.insertCell().innerHTML = highlightMatch(result.BRAND, terms);
+                row.insertCell().innerHTML = highlightMatch(result.COMPANY, terms);
+                row.insertCell().textContent = result.PACK || 'N/A';
+                row.insertCell().textContent = isNumeric(result.RATE) ? Number(result.RATE).toFixed(2) : 'N/A';
+                row.insertCell().textContent = isNumeric(result["Free Scheme"]) ? Number(result["Free Scheme"]).toFixed(2) : 'N/A';
+                row.insertCell().textContent = isNumeric(result.MRP) ? Number(result.MRP).toFixed(2) : 'N/A';
+                row.insertCell().innerHTML = highlightMatch(result.CONTENT, terms);
+                row.insertCell().textContent = result.CASE || 'N/A';
+                row.insertCell().textContent = result.totalMatches;
+            });
+        }
+
+        function showSuggestions(input) {
+            const suggestions = autocompleteWords.filter(word => word.toLowerCase().startsWith(input));
+
+            const autocompleteDiv = document.getElementById('autocomplete');
+            autocompleteDiv.innerHTML = '';
+
+            if (input && suggestions.length) {
+                suggestions.forEach(suggestion => {
+                    const div = document.createElement('div');
+                    div.className = 'autocomplete-suggestion';
+                    div.textContent = suggestion;
+                    div.onclick = () => {
+                        const searchBar = document.getElementById('searchBar');
+                        searchBar.value = suggestion;
+                        autocompleteDiv.innerHTML = '';
+                        search(suggestion);
+                    };
+                    autocompleteDiv.appendChild(div);
+                });
+            }
+        }
+
+        function resetSearch() {
+            document.getElementById('searchBar').value = '';
+            showInitialMessage();
+        }
+
+        function showInitialMessage() {
+            const resultsTable = document.getElementById('resultsTable').getElementsByTagName('tbody')[0];
+            resultsTable.innerHTML = '<tr><td colspan="9">Waiting for input...</td></tr>';
+        }
+
+        function isNumeric(value) {
+            return !isNaN(parseFloat(value)) && isFinite(value);
+        }
+
+        function highlightMatch(text, terms) {
+            if (!text) return 'N/A';
+            let highlightedText = text;
+            terms.forEach(term => {
+                const regex = new RegExp(`(${term})`, 'gi');
+                highlightedText = highlightedText.toString().replace(regex, '<span class="highlight">$1</span>');
+            });
+            return highlightedText;
+        }
+
+        // Load JSON data on page load
+        window.onload = loadData;
+    </script>
+</body>
+</html>
